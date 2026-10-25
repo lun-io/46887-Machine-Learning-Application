@@ -245,7 +245,3 @@ if uploaded_file is not None:
         "Incorrect predictions may lead to misleading "
         "conclusions or poor decisions."
     )
-
-    st.info(
-        
-    )
