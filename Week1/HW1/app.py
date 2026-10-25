@@ -247,7 +247,5 @@ if uploaded_file is not None:
     )
 
     st.info(
-        "This app is for educational purposes. "
-        "Predictions depend on the uploaded dataset "
-        "and the variables selected."
+        
     )
