@@ -8,7 +8,7 @@ from labeler import label_comment
 
 # ---- Settings ----------------------------------------------------------
 TITLE = "Slice Street Pizza"
-LOGO = "logo.png"
+LOGO = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logo.png")
 LOW_RATING, HIGH_RATING = 2, 4      # 2 stars or fewer is low, 4 stars or more is high
 CSV_FILE = "feedback.csv"
 COLORS = {"positive": "#2BB38A", "negative": "#B34700", "unclear": "#D0D0D0"}
