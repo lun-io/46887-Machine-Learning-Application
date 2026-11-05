@@ -4,7 +4,10 @@ from datetime import date, timedelta
 import pandas as pd
 import requests
 import streamlit as st
+import os
 
+st.write("Working directory:", os.getcwd())
+st.write("Model exists:", os.path.exists("model.pkl"))
 # ---- Settings ----------------------------------------------------------
 CITIES = {
     "Pittsburgh": (40.44, -79.99),
