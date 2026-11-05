@@ -4,10 +4,7 @@ from datetime import date, timedelta
 import pandas as pd
 import requests
 import streamlit as st
-import os
 
-st.write("Working directory:", os.getcwd())
-st.write("Model exists:", os.path.exists("model.pkl"))
 # ---- Settings ----------------------------------------------------------
 CITIES = {
     "Pittsburgh": (40.44, -79.99),
@@ -22,7 +19,7 @@ URL = "https://api.open-meteo.com/v1/forecast"
 # ------------------------------------------------------------------------
 
 # Load the trained model (we trained it once, in Colab, and saved it to a file)
-with open("model.pkl", "rb") as f:
+with open("Week3_API/ice-cream/model.pkl", "rb") as f:
     model = pickle.load(f)
 
 st.set_page_config(page_title="Ice Cream Sales Predictor", page_icon="🍦")
