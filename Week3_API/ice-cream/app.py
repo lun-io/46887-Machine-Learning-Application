@@ -31,7 +31,7 @@ selected_date = st.date_input(
     "Date",
     value=date.today() + timedelta(days=1),
     min_value=date.today(),
-    max_value=date.today() + timedelta(days=16),    # the forecast reaches about 16 days ahead
+    max_value=date.today() + timedelta(days=15),    # the forecast reaches about 16 days ahead
 )
 
 if st.button("Predict sales", type="primary"):
