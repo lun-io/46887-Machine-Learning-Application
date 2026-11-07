@@ -13,6 +13,7 @@ CITIES = {
     "Miami": (25.76, -80.19),
     "Los Angeles": (34.05, -118.24),
     "Harbin": (45.75, 126.65),
+    "Singapore": (1.3521, 103.8198),
 }
 LOW_TEMP, HIGH_TEMP = 50, 100        # the temperatures (F) the model learned from
 LOW_SALES, HIGH_SALES = 200, 300     # below LOW_SALES is a slow day, above HIGH_SALES is a busy one
