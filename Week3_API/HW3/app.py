@@ -22,7 +22,7 @@ URL = "https://api.open-meteo.com/v1/forecast"
 # Load the trained multiple linear regression model
 from pathlib import Path
 model_path = Path(__file__).resolve().parent / "model.pkl"
-with open("model.pkl", "rb") as f:
+with open(model_path, "rb") as f:
     model = pickle.load(f)
 
 st.set_page_config(page_title="Ice Cream Sales Predictor", page_icon="🍦")
