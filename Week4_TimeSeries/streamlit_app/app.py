@@ -9,8 +9,10 @@ st.write("Pick some data, choose how far ahead to look, and get a forecast with 
 # 1. Get the data
 source = st.radio("Data", ["Sample data", "Upload my own CSV"])
 
+from pathlib import Path
 if source == "Sample data":
-    data = pd.read_csv("daily_sales.csv")
+    csv_path = Path(__file__).resolve().parent.parent / "daily_sales.csv"
+    data = pd.read_csv(csv_path)
 else:
     file = st.file_uploader("Upload a CSV file", type="csv")
     if file is None:
