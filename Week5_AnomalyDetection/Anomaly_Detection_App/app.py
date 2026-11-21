@@ -3,11 +3,13 @@ import joblib
 import numpy as np
 import pandas as pd
 import streamlit as st
+from pathlib import Path
 
+APP_DIR = Path(__file__).resolve().parent
 st.set_page_config(page_title='Transaction Monitor', layout='wide')
 
 # ---- load the trained model (made in the Colab notebook) ----
-bundle = joblib.load('model.joblib')
+bundle = joblib.load(APP_DIR / 'model.joblib')
 model = bundle['model']
 history_scores = bundle['history_scores']
 features = bundle['features']
@@ -65,7 +67,7 @@ with tab2:
     pause = {'Slow': 0.5, 'Medium': 0.15, 'Fast': 0.02}[speed]
 
     if st.button('Start the stream'):
-        stream = pd.read_csv('new_transactions.csv')
+        stream = pd.read_csv(APP_DIR / 'new_transactions.csv')
         box = st.empty()
         counts = st.empty()
         st.subheader('Sent to review')
