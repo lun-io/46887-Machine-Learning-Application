@@ -76,26 +76,22 @@ with tab2:
             s = score(r['amount'], r['customer_typical_amount'],
                       r['transactions_last_hour'], r['minutes_since_previous'],
                       r['account_age_days'])
-            msg = f"{r['transaction_id']}: ${r['amount']:.2f}  score {s:.3f}"
             if s > cutoff:
                 flagged.append({'id': r['transaction_id'], 'amount': r['amount'],
                                 'typical': r['customer_typical_amount'],
                                 'last_hour': r['transactions_last_hour'],
                                 'score': round(s, 3)})
-                box.error(msg + '  ->  REVIEW')
+                box.error(f"{r['transaction_id']}: ${r['amount']:.2f}  ->  REVIEW (score {s:.3f})")
             else:
-                box.info(msg + '  ->  ok')
-            counts.write(f'Received **{i + 1}** of {len(stream)}.  '
-                         f'Sent to review: **{len(flagged)}**')
+                box.info(f"{r['transaction_id']}: ${r['amount']:.2f}  ->  ok (score {s:.3f})")
+            counts.write(f'Received **{i + 1}** of {len(stream)}.  Sent to review: **{len(flagged)}**')
             if flagged:
                 table.dataframe(pd.DataFrame(flagged), hide_index=True)
             time.sleep(pause)
 
-        st.success(f'Done. {len(flagged)} transactions were sent to review.')
-
-        # if the file has an answer key, check how we did
-        if 'needs_review' in stream.columns:
-            answer = stream.set_index('transaction_id')['needs_review']
-            hits = sum(answer[f['id']] for f in flagged)
-            st.write(f'{hits} of the {len(flagged)} flagged transactions really needed '
-                     f'review. In total, {answer.sum()} transactions needed review.')
+        # at the end, look at the answer key
+        answer = stream.set_index('transaction_id')['needs_review']
+        hits = sum(answer[f['id']] for f in flagged)
+        st.success(f'Done. {len(flagged)} transactions were sent to review, '
+                   f'and {hits} of them really needed review. '
+                   f'In total, {answer.sum()} transactions needed review.')
