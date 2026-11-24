@@ -71,7 +71,7 @@ with tab2:
         options=["Slow", "Medium", "Fast"],
         value="Medium",
     )
-    interval = {"Slow": 0.5, "Medium": 0.25, "Fast": 0.1}[speed]
+    interval = {"Slow": 0.5, "Medium": 0.35, "Fast": 0.17}[speed]
 
     # Keep the current run across widget changes.
     if "monitor_run" not in st.session_state:
