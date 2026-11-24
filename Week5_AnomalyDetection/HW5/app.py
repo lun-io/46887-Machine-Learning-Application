@@ -43,41 +43,109 @@ tab1, tab2 = st.tabs(['Check one transaction', 'Live stream'])
 
 # ---- tab 1: type in one transaction ----
 with tab1:
+    st.caption(
+        "Enter information for the same account and time. "
+        "The transaction count excludes the current transaction "
+        "and includes previous transactions less than 60 minutes ago."
+    )
+
+    no_previous = st.checkbox(
+        "This account has no previous transaction"
+    )
+
     c1, c2 = st.columns(2)
 
     amount = c1.number_input(
-        "Amount ($)", min_value=1.0, value=60.0
+        "Amount ($)",
+        min_value=1.0,
+        value=60.0,
     )
+
     typical = c1.number_input(
-        "Customer's typical amount ($)", min_value=1.0, value=50.0
+        "Customer's typical amount ($)",
+        min_value=1.0,
+        value=50.0,
     )
+
     last_hour = c1.number_input(
-        "Transactions in the last hour", min_value=0, value=1
+        "Previous transactions in the last 60 minutes",
+        min_value=0,
+        value=0,
+        help="Do not include the transaction currently being checked.",
     )
+
     gap = c2.number_input(
         "Minutes since previous transaction",
         min_value=0.0,
         value=120.0,
+        disabled=no_previous,
+        help=(
+            "Zero means a previous transaction occurred just now. "
+            "It does not mean there is no previous transaction."
+        ),
     )
+
     age = c2.number_input(
-        "Account age (days)", min_value=0, value=700
+        "Account age (days)",
+        min_value=0,
+        value=700,
     )
 
     if st.button("Score this transaction"):
-        inconsistent = last_hour >= 2 and gap > 60
+        errors = []
 
-        if inconsistent:
-            st.error(
-                "Inconsistent inputs: you entered two or more "
-                "transactions in the last hour, but the previous "
-                "transaction was more than 60 minutes ago. "
-                "Check the transaction count or time gap, "
-                "then click 'Score this transaction' again."
+        if not all(
+            np.isfinite(v)
+            for v in [amount, typical, last_hour, gap, age]
+        ):
+            errors.append(
+                "All numeric inputs must be finite numbers. "
+                "Correct any missing or infinite values."
             )
+
+        if no_previous:
+            if last_hour != 0:
+                errors.append(
+                    "An account with no previous transaction cannot "
+                    "have previous transactions in the last hour. "
+                    "Correct the count or uncheck the checkbox."
+                )
+        else:
+            if gap < 60 and last_hour == 0:
+                errors.append(
+                    "The previous transaction occurred less than "
+                    "60 minutes ago, but the transaction count is zero. "
+                    "Correct the count or the time gap."
+                )
+
+            if gap >= 60 and last_hour > 0:
+                errors.append(
+                    "The previous transaction occurred at least "
+                    "60 minutes ago, but the last-hour count is positive. "
+                    "Correct the count or the time gap. "
+                    "Transactions exactly 60 minutes ago are excluded "
+                    "from this count."
+                )
+
+        if errors:
+            for message in errors:
+                st.error(message)
+
             st.info(
-                "No score or review decision was produced "
-                "because the inputs are inconsistent."
+                "No score or review decision was produced. "
+                "Correct the inputs, then click "
+                "'Score this transaction' again."
             )
+
+        elif no_previous:
+            st.warning(
+                "This check requires a time gap from a previous "
+                "transaction. Because no previous transaction exists, "
+                "no model score or review decision was produced. "
+                "Refer this case for manual assessment; "
+                "do not enter an invented time gap."
+            )
+
         else:
             s = score(amount, typical, last_hour, gap, age)
 
@@ -91,6 +159,7 @@ with tab1:
                 )
 
             share = (history_scores < s).mean() * 100
+
             st.write(
                 f"This is more unusual than "
                 f"{share:.0f}% of past transactions."
