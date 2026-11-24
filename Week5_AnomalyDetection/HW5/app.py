@@ -44,15 +44,26 @@ tab1, tab2 = st.tabs(['Check one transaction', 'Live stream'])
 # ---- tab 1: type in one transaction ----
 with tab1:
     c1, c2 = st.columns(2)
-    amount = c1.number_input('Amount ($)', min_value=1.0, value=60.0)
-    typical = c1.number_input("Customer's typical amount ($)", min_value=1.0, value=50.0)
-    last_hour = c1.number_input('Transactions in the last hour', min_value=0, value=1)
-    gap = c2.number_input('Minutes since previous transaction', min_value=0.0, value=120.0)
-    age = c2.number_input('Account age (days)', min_value=0, value=700)
 
-        if st.button("Score this transaction"):
+    amount = c1.number_input(
+        "Amount ($)", min_value=1.0, value=60.0
+    )
+    typical = c1.number_input(
+        "Customer's typical amount ($)", min_value=1.0, value=50.0
+    )
+    last_hour = c1.number_input(
+        "Transactions in the last hour", min_value=0, value=1
+    )
+    gap = c2.number_input(
+        "Minutes since previous transaction",
+        min_value=0.0,
+        value=120.0,
+    )
+    age = c2.number_input(
+        "Account age (days)", min_value=0, value=700
+    )
 
-        # These fields must describe the same account and time.
+    if st.button("Score this transaction"):
         inconsistent = last_hour >= 2 and gap > 60
 
         if inconsistent:
@@ -67,7 +78,6 @@ with tab1:
                 "No score or review decision was produced "
                 "because the inputs are inconsistent."
             )
-
         else:
             s = score(amount, typical, last_hour, gap, age)
 
