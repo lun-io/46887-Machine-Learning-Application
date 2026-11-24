@@ -71,7 +71,7 @@ with tab2:
         options=["Slow", "Medium", "Fast"],
         value="Medium",
     )
-    interval = {"Slow": 0.5, "Medium": 0.15, "Fast": 0.02}[speed]
+    interval = {"Slow": 1.0, "Medium": 0.5, "Fast": 0.2}[speed]
 
     # Keep the current run across widget changes.
     if "monitor_run" not in st.session_state:
@@ -249,12 +249,13 @@ with tab2:
         if current["flagged"]:
             review_table = pd.DataFrame(current["flagged"])
             st.dataframe(review_table, hide_index=True)
-            st.download_button(
-                "Download current review results",
-                data=review_table.to_csv(index=False).encode("utf-8"),
-                file_name="review_results.csv",
-                mime="text/csv",
-            )
+            if current["status"] != "running":
+                st.download_button(
+                    "Download current review results",
+                    data=review_table.to_csv(index=False).encode("utf-8"),
+                    file_name="review_results.csv",
+                    mime="text/csv",
+                )
         else:
             st.write("No transactions flagged so far.")
 
