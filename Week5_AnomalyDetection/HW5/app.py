@@ -50,14 +50,41 @@ with tab1:
     gap = c2.number_input('Minutes since previous transaction', min_value=0.0, value=120.0)
     age = c2.number_input('Account age (days)', min_value=0, value=700)
 
-    if st.button('Score this transaction'):
-        s = score(amount, typical, last_hour, gap, age)
-        if s > cutoff:
-            st.error(f'REVIEW  (score {s:.3f}, cutoff {cutoff:.3f})')
+        if st.button("Score this transaction"):
+
+        # These fields must describe the same account and time.
+        inconsistent = last_hour >= 2 and gap > 60
+
+        if inconsistent:
+            st.error(
+                "Inconsistent inputs: you entered two or more "
+                "transactions in the last hour, but the previous "
+                "transaction was more than 60 minutes ago. "
+                "Check the transaction count or time gap, "
+                "then click 'Score this transaction' again."
+            )
+            st.info(
+                "No score or review decision was produced "
+                "because the inputs are inconsistent."
+            )
+
         else:
-            st.success(f'OK  (score {s:.3f}, cutoff {cutoff:.3f})')
-        share = (history_scores < s).mean() * 100
-        st.write(f'This is more unusual than {share:.0f}% of past transactions.')
+            s = score(amount, typical, last_hour, gap, age)
+
+            if s > cutoff:
+                st.error(
+                    f"REVIEW  (score {s:.3f}, cutoff {cutoff:.3f})"
+                )
+            else:
+                st.success(
+                    f"OK  (score {s:.3f}, cutoff {cutoff:.3f})"
+                )
+
+            share = (history_scores < s).mean() * 100
+            st.write(
+                f"This is more unusual than "
+                f"{share:.0f}% of past transactions."
+            )
 
 # ---- tab 2: transactions arriving one by one ----
 with tab2:
