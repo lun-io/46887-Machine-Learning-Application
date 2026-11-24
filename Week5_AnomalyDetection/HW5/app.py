@@ -61,39 +61,208 @@ with tab1:
 
 # ---- tab 2: transactions arriving one by one ----
 with tab2:
-    st.write('Press the button. The app receives the new transactions one at a time '
-             'and scores each one as it arrives.')
-    speed = st.select_slider('Speed', options=['Slow', 'Medium', 'Fast'], value='Medium')
-    pause = {'Slow': 0.5, 'Medium': 0.15, 'Fast': 0.02}[speed]
+    st.write(
+        "Start the stream to check transactions one at a time. "
+        "Changing speed preserves progress and review results."
+    )
 
-    if st.button('Start the stream'):
-        stream = pd.read_csv(APP_DIR / 'new_transactions.csv')
-        box = st.empty()
-        counts = st.empty()
-        st.subheader('Sent to review')
-        table = st.empty()
-        flagged = []
+    speed = st.select_slider(
+        "Speed",
+        options=["Slow", "Medium", "Fast"],
+        value="Medium",
+    )
+    interval = {"Slow": 0.5, "Medium": 0.15, "Fast": 0.02}[speed]
 
-        for i, r in stream.iterrows():
-            s = score(r['amount'], r['customer_typical_amount'],
-                      r['transactions_last_hour'], r['minutes_since_previous'],
-                      r['account_age_days'])
-            if s > cutoff:
-                flagged.append({'id': r['transaction_id'], 'amount': r['amount'],
-                                'typical': r['customer_typical_amount'],
-                                'last_hour': r['transactions_last_hour'],
-                                'score': round(s, 3)})
-                box.error(f"{r['transaction_id']}: ${r['amount']:.2f}  ->  REVIEW (score {s:.3f})")
+    # Keep the current run across widget changes.
+    if "monitor_run" not in st.session_state:
+        st.session_state.monitor_run = None
+
+    run = st.session_state.monitor_run
+    status = run["status"] if run is not None else "idle"
+
+    c1, c2, c3, c4 = st.columns(4)
+
+    if c1.button("Start the stream", disabled=run is not None):
+        try:
+            stream = pd.read_csv(APP_DIR / "new_transactions.csv")
+            if stream.empty:
+                st.error("No transactions found. Check new_transactions.csv.")
             else:
-                box.info(f"{r['transaction_id']}: ${r['amount']:.2f}  ->  ok (score {s:.3f})")
-            counts.write(f'Received **{i + 1}** of {len(stream)}.  Sent to review: **{len(flagged)}**')
-            if flagged:
-                table.dataframe(pd.DataFrame(flagged), hide_index=True)
-            time.sleep(pause)
+                st.session_state.monitor_run = {
+                    "data": stream,
+                    "next_index": 0,
+                    "flagged": [],
+                    "last": None,
+                    "status": "running",
+                    "budget": pct,
+                    "cutoff": float(cutoff),
+                    "error": None,
+                }
+                st.rerun()
+        except (OSError, pd.errors.ParserError, pd.errors.EmptyDataError):
+            st.error(
+                "The transaction file could not be loaded. "
+                "Check new_transactions.csv, then click Start again."
+            )
 
-        # at the end, look at the answer key
-        answer = stream.set_index('transaction_id')['needs_review']
-        hits = sum(answer[f['id']] for f in flagged)
-        st.success(f'Done. {len(flagged)} transactions were sent to review, '
-                   f'and {hits} of them really needed review. '
-                   f'In total, {answer.sum()} transactions needed review.')
+    if c2.button("Pause", disabled=status != "running"):
+        st.session_state.monitor_run = {**run, "status": "paused"}
+        st.rerun()
+
+    if c3.button("Resume", disabled=status != "paused"):
+        st.session_state.monitor_run = {
+            **run,
+            "status": "running",
+            "error": None,
+        }
+        st.rerun()
+
+    if c4.button(
+        "Reset for a new run",
+        disabled=run is None or status == "running",
+        help="Clears this run's progress and results. Download them first.",
+    ):
+        st.session_state.monitor_run = None
+        st.rerun()
+
+    st.caption(
+        "Progress is saved within this browser session. "
+        "Download results before resetting or refreshing the page."
+    )
+
+    # Process one transaction per update, rather than one long loop.
+    @st.fragment(
+        run_every=interval if status == "running" else None
+    )
+    def update_stream():
+        current = st.session_state.monitor_run
+
+        if current is None:
+            st.info("Choose a budget and speed, then click Start the stream.")
+            return
+
+        data = current["data"]
+        total = len(data)
+
+        if current["status"] == "running":
+            i = current["next_index"]
+            row = data.iloc[i]
+
+            try:
+                s = score(
+                    row["amount"],
+                    row["customer_typical_amount"],
+                    row["transactions_last_hour"],
+                    row["minutes_since_previous"],
+                    row["account_age_days"],
+                )
+                if not np.isfinite(s):
+                    raise ValueError("Non-finite score")
+            except Exception:
+                st.session_state.monitor_run = {
+                    **current,
+                    "status": "paused",
+                    "error": (
+                        f"Transaction at row {i + 1} could not be scored. "
+                        "Earlier results are preserved. No result was "
+                        "recorded for this transaction. Retry with Resume; "
+                        "if the problem persists, check the source data "
+                        "and model setup, then reset for a new run."
+                    ),
+                }
+                st.rerun()
+
+            needs_check = s > current["cutoff"]
+            flagged = list(current["flagged"])
+
+            if needs_check:
+                flagged.append({
+                    "id": row["transaction_id"],
+                    "amount": row["amount"],
+                    "typical": row["customer_typical_amount"],
+                    "last_hour": row["transactions_last_hour"],
+                    "score": round(s, 3),
+                })
+
+            # Save the result and next position together before displaying.
+            current = {
+                **current,
+                "next_index": i + 1,
+                "flagged": flagged,
+                "last": {
+                    "id": row["transaction_id"],
+                    "amount": row["amount"],
+                    "score": s,
+                    "review": needs_check,
+                },
+                "status": "done" if i + 1 == total else "running",
+            }
+            st.session_state.monitor_run = current
+
+            if current["status"] == "done":
+                st.rerun()
+
+        st.caption(
+            f"This run uses a {current['budget']}% review budget "
+            f"and cutoff {current['cutoff']:.3f}."
+        )
+
+        if pct != current["budget"]:
+            st.warning(
+                "The sidebar budget has changed. This run keeps its "
+                "original cutoff so results remain consistent. "
+                "To use the new budget, pause if needed, download "
+                "your results, reset, and start a new run."
+            )
+
+        if current["error"]:
+            st.error(current["error"])
+        elif current["status"] == "paused":
+            st.warning(
+                "Paused — screening is incomplete. Progress and review "
+                "results are preserved. Click Resume to continue."
+            )
+        elif current["status"] == "running":
+            st.info(
+                "Screening in progress. You may change speed safely "
+                "or click Pause. The results below are partial."
+            )
+
+        last = current["last"]
+        if last is not None:
+            message = (
+                f"{last['id']}: ${last['amount']:.2f} → "
+                f"{'REVIEW' if last['review'] else 'ok'} "
+                f"(score {last['score']:.3f})"
+            )
+            if last["review"]:
+                st.error(message)
+            else:
+                st.info(message)
+
+        st.write(
+            f"Received **{current['next_index']}** of {total}. "
+            f"Sent to review: **{len(current['flagged'])}**"
+        )
+
+        st.subheader("Sent to review")
+        if current["flagged"]:
+            review_table = pd.DataFrame(current["flagged"])
+            st.dataframe(review_table, hide_index=True)
+            st.download_button(
+                "Download current review results",
+                data=review_table.to_csv(index=False).encode("utf-8"),
+                file_name="review_results.csv",
+                mime="text/csv",
+            )
+        else:
+            st.write("No transactions flagged so far.")
+
+        if current["status"] == "done":
+            st.success(
+                f"Screening complete: all {total} transactions processed. "
+                f"{len(current['flagged'])} transactions were flagged "
+                "for review. Results remain available until you reset."
+            )
+
+    update_stream()
